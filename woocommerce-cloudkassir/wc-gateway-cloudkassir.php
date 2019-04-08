@@ -50,7 +50,7 @@ function CloudKassir()
       $this->id                 =  'cp_kassir';
       $this->has_fields         =  true;
       $this->method_title       =  __( 'CloudKassir', 'woocommerce' );
-      $this->method_description =  'CloudKassir';
+      $this->method_description =  'CloudKassir, онлайн-кассы для интернет-магазинов по 54-ФЗ';
       $this->supports           =  array( 'products','pre-orders' );
       $this->enabled            =  $this->get_option( 'enabled' );
       $this->inn            =  $this->get_option( 'inn' );
@@ -157,7 +157,7 @@ function CloudKassir()
 					'title' 		=> __( 'Место осуществления расчёта', 'woocommerce' ),
 					'type' 			=> 'text',
 					'description'	=> '',
-					'default' 		=> '$_SERVER['DOCUMENT_ROOT']',
+					'default' 		=> '',
 					'desc_tip' 		=> true,
 				),
 				'kassa_taxtype' => array(
