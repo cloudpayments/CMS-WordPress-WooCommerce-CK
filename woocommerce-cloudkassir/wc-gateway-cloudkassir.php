@@ -50,7 +50,7 @@ function CloudKassir()
       $this->id                 =  'cp_kassir';
       $this->has_fields         =  true;
       $this->method_title       =  __( 'CloudKassir', 'woocommerce' );
-      $this->method_description =  'CloudKassir';
+      $this->method_description =  'CloudKassir, онлайн-кассы для интернет-магазинов по 54-ФЗ';
       $this->supports           =  array( 'products','pre-orders' );
       $this->enabled            =  $this->get_option( 'enabled' );
       $this->inn            =  $this->get_option( 'inn' );
@@ -67,6 +67,7 @@ function CloudKassir()
       $this->kassa_taxtype    = $this->get_option( 'kassa_taxtype' );
       $this->delivery_taxtype    = $this->get_option( 'delivery_taxtype' );
       $this->kassa_taxsystem  = $this->get_option( 'kassa_taxsystem' );
+      $this->calculationPlace  = $this->get_option( 'calculationPlace' );
       $this->kassa_skubarcode  = $this->get_option( 'kassa_skubarcode' );
       $this->kassa_includeshipping  = $this->get_option( 'kassa_includeshipping' );
       $this->payment_methods  = $this->get_option( 'payment_methods' );
@@ -150,7 +151,14 @@ function CloudKassir()
 					'type' 			=> 'text',
 					'description'	=> '',
 					'default' 		=> '',
-					'desc_tip' 		=> false,
+					'desc_tip' 		=> true,
+        ),
+        'calculationPlace' => array(
+					'title' 		=> __( 'Место осуществления расчёта', 'woocommerce' ),
+					'type' 			=> 'text',
+					'description'	=> '',
+					'default' 		=> '',
+					'desc_tip' 		=> true,
 				),
 				'kassa_taxtype' => array(
 					'title'       => __( 'Ставка НДС', 'woocommerce' ),
@@ -160,12 +168,12 @@ function CloudKassir()
 					'default'     => '10',
 					'desc_tip'    => true,
 					'options'     => array(
-						'null' => __( 'НДС не облагается', 'woocommerce' ),
-						'18' => __( 'НДС 18%', 'woocommerce' ),
+						'' => __( 'НДС не облагается', 'woocommerce' ),
+						'20' => __( 'НДС 20%', 'woocommerce' ),
 						'10' => __( 'НДС 10%', 'woocommerce' ),
 						'0' => __( 'НДС 0%', 'woocommerce' ),
 						'110' => __( 'расчетный НДС 10/110', 'woocommerce' ),
-						'118' => __( 'расчетный НДС 18/118', 'woocommerce' ),
+						'120' => __( 'расчетный НДС 20/120', 'woocommerce' ),
 					),
 				),  
 				'delivery_taxtype' => array(
@@ -176,12 +184,12 @@ function CloudKassir()
 					'default'     => '10',
 					'desc_tip'    => true,
 					'options'     => array(
-						'null' => __( 'НДС не облагается', 'woocommerce' ),
-						'18' => __( 'НДС 18%', 'woocommerce' ),
+						'' => __( 'НДС не облагается', 'woocommerce' ),
+						'20' => __( 'НДС 20%', 'woocommerce' ),
 						'10' => __( 'НДС 10%', 'woocommerce' ),
 						'0' => __( 'НДС 0%', 'woocommerce' ),
 						'110' => __( 'расчетный НДС 10/110', 'woocommerce' ),
-						'118' => __( 'расчетный НДС 18/118', 'woocommerce' ),
+						'120' => __( 'расчетный НДС 20/120', 'woocommerce' ),
 					),
 				), 
 				'kassa_taxsystem' => array(
@@ -305,6 +313,7 @@ function CloudKassir()
       
       $data['cloudPayments']['customerReceipt']['Items']=$items;
       $data['cloudPayments']['customerReceipt']['taxationSystem']=$this->kassa_taxsystem; 
+      $data['cloudPayments']['customerReceipt']['calculationPlace']=$this->calculationPlace; 
       $data['cloudPayments']['customerReceipt']['email']=$order->get_billing_email(); 
       $data['cloudPayments']['customerReceipt']['phone']=$order->get_billing_phone();  
       
