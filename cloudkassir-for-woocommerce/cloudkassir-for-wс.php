@@ -3,7 +3,7 @@
  * Plugin Name: CloudKassir for WooCommerce
  * Plugin URI: https://cloudkassir.ru/
  * Description: Extends WooCommerce with CloudKassir.
- * Version: 2.0
+ * Version: 2.1
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -347,87 +347,131 @@ function ckgwwc_CloudKassir()
     
   	public function ckgwwc_SendReceipt($order,$type,$old_status,$new_status)
     {
-        self::ckgwwc_addError('SendReceipt!!');
-        $cart=$order->get_items();
-        $total_amount = 0;
-        
-    	foreach ($cart as $item_id => $item_data):
-        $product = $item_data->get_product();
-        if ("wc-".$new_status == $this->status_delivered) {
-            $method = 4;
-        }
-        else {
-            $method = (int)$this->kassa_method;
-        };
-        $items[]=array(
-                'label'    => $product->get_name(),
-                'price'    => number_format($product->get_price(),2,".",''),
-                'quantity' => $item_data->get_quantity(),
-                'amount'   => number_format(floatval($item_data->get_total()),2,".",''),
-                'vat'      => $this->kassa_taxtype,
-                'method'   => $method,
-                'object'   => (int)$this->kassa_object,
-        ); 
-        
-        $total_amount = $total_amount +  number_format(floatval($item_data->get_total()),2,".",'');
+	    self::ckgwwc_addError('SendReceipt!!');
+	    $cart=$order->get_items();
+	    $total_amount = 0;
 
-        endforeach; 
-        
-          if ($order->get_total_shipping()):
-            $items[]=array(
-                    'label'=>"Доставка",
-                    'price'=>$order->get_total_shipping(),
-                    'quantity'=>1,
-                    'amount'=>$order->get_total_shipping(),
-                    'vat'=>$this->delivery_taxtype, 
-                    'method'   => $method,
-                    'object'   => 4,
-            ); 
-            
-            $total_amount = $total_amount + number_format(floatval($order->get_total_shipping()),2,".",'');
-            
-        endif; 
-      
-      $data['cloudPayments']['customerReceipt']['Items']=$items;
-      $data['cloudPayments']['customerReceipt']['taxationSystem']=$this->kassa_taxsystem; 
-      $data['cloudPayments']['customerReceipt']['calculationPlace']=$this->calculationPlace; 
-      $data['cloudPayments']['customerReceipt']['email']=$order->get_billing_email(); 
-      $data['cloudPayments']['customerReceipt']['phone']=$order->get_billing_phone();  
-      
-      $data['cloudPayments']['customerReceipt']['amounts']['electronic']=$total_amount;
-      
-      if ("wc-".$new_status == $this->status_delivered) {
-          $data['cloudPayments']['customerReceipt']['amounts']['electronic']=0;
-          $data['cloudPayments']['customerReceipt']['amounts']['advancePayment']=$total_amount;
-      }
-      
-  		$aData = array(
-  			'Inn' => $this->inn,
-  			'InvoiceId' => $order->get_id(), //номер заказа, необязательный
-  			'AccountId' => $order->get_user_id(),
-  			'Type' => $type,
-  			'CustomerReceipt' => $data['cloudPayments']['customerReceipt']
-  		);
-      $API_URL='https://api.cloudpayments.ru/kkt/receipt';
-      self::ckgwwc_send_request($API_URL,$aData);
-      self::ckgwwc_addError("kkt/receipt");
+	    foreach ($cart as $item_id => $item_data):
+		    $product = $item_data->get_product();
+		    if ("wc-".$new_status == $this->status_delivered) {
+			    $method = 4;
+		    }
+		    else {
+			    $method = (int)$this->kassa_method;
+		    };
+
+		    //вычисление скидки
+		    $fees = $order->get_items('fee');
+		    foreach($fees as $fee){
+			    $total_fees = floatval($fee->get_total());
+		    }
+		    //$this->ckgwwc_addError('fee:'.$total_fees);
+
+
+		    $items[]=array(
+			    'label'    => $product->get_name(),
+			    'price'    => number_format($product->get_price(),2,".",''),
+			    'quantity' => $item_data->get_quantity(),
+			    'amount'   => number_format(floatval($item_data->get_total()),2,".",''),
+			    'vat'      => $this->kassa_taxtype,
+			    'method'   => $method,
+			    'object'   => (int)$this->kassa_object,
+		    );
+
+		    $total_amount = $total_amount +  number_format(floatval($item_data->get_total()),2,".",'');
+
+	    endforeach;
+
+	    if ($order->get_total_shipping()):
+		    $items[]=array(
+			    'label'=>"Доставка",
+			    'price'=>$order->get_total_shipping(),
+			    'quantity'=>1,
+			    'amount'=>$order->get_total_shipping(),
+			    'vat'=>$this->delivery_taxtype,
+			    'method'   => $method,
+			    'object'   => 4,
+		    );
+
+		    $total_amount = $total_amount + number_format(floatval($order->get_total_shipping()),2,".",'');
+
+	    endif;
+
+
+	    $data['cloudPayments']['customerReceipt']['Items']=$items;
+	    $data['cloudPayments']['customerReceipt']['taxationSystem']=$this->kassa_taxsystem;
+	    $data['cloudPayments']['customerReceipt']['calculationPlace']=$this->calculationPlace;
+	    $data['cloudPayments']['customerReceipt']['email']=$order->get_billing_email();
+	    $data['cloudPayments']['customerReceipt']['phone']=$order->get_billing_phone();
+	    //вычисление итогового amount
+	    $data['cloudPayments']['customerReceipt']['amounts']['electronic']=$total_amount + $total_fees;
+	    //вычитаем скидку
+
+	    if(!empty($total_fees)){
+		    $percent = $total_fees / floatval($total_amount);
+	    }
+
+
+
+	    foreach ($data['cloudPayments']['customerReceipt']['Items'] as &$item){
+		    if(!empty($percent)){
+			    $fee_item = floatval($item['amount']) * $percent;
+
+			    $amount = $item['amount'] + $fee_item;
+			    $item['amount'] = number_format(floatval($amount), 2);
+		    }
+	    }
+	    /*for ($i=0; $i<(count($items)); $i++) {
+		  if ($items[$i]['amount']>$total_fees) {
+			  $data['cloudPayments']['customerReceipt']['Items'][$i]['amount']=$data['cloudPayments']['customerReceipt']['Items'][$i]['amount'] + $total_fees;
+			  $this->ckgwwc_addError('data:'.json_encode($data['cloudPayments']['customerReceipt']['Items'][$i]['amount']));
+			  break;
+		  }
+		}*/
+	    //вычитаем скидку из второго чека
+	    if ("wc-".$new_status == $this->status_delivered) {
+		    $data['cloudPayments']['customerReceipt']['amounts']['electronic']=0;
+		    $data['cloudPayments']['customerReceipt']['amounts']['advancePayment']=$total_amount + $total_fees;
+	    }
+
+	    $aData = array(
+		    'Inn' => $this->inn,
+		    'InvoiceId' => $order->get_id(), //номер заказа, необязательный
+		    'AccountId' => $order->get_user_id(),
+		    'Type' => $type,
+		    'CustomerReceipt' => $data['cloudPayments']['customerReceipt']
+	    );
+
+
+
+	    self::ckgwwc_addError(json_encode($aData));
+	    $API_URL='https://api.cloudpayments.ru/kkt/receipt';
+	    self::ckgwwc_send_request($API_URL,$aData);
+	    self::ckgwwc_addError("kkt/receipt");
     }
     
     public function ckgwwc_send_request($API_URL,$request)  ///OK
     {
-        $request2=self::ckgwwc_cur_json_encode($request);
-        $str=date("d-m-Y H:i:s").$request['Type'].$request['InvoiceId'].$request['AccountId'].$request['CustomerReceipt']['email'];
-        $reque=md5($str);
-        $auth = base64_encode($this->public_id. ":" . $this->api_pass); 
-        wp_remote_post( $API_URL, array(
-	            'timeout'     => 30,
-	            'redirection' => 5,
-	            'httpversion' => '1.0',
-	            'blocking'    => true,
-	            'headers'     => array('Authorization' => 'Basic '.$auth, 'Content-Type' => 'application/json', 'X-Request-ID' => $reque),
-	            'body'        => $request2,
-	            'cookies'     => array()
-        ) );
+	    $request2=self::ckgwwc_cur_json_encode($request);
+	    $str=date("d-m-Y H:i:s").$request['Type'].$request['InvoiceId'].$request['AccountId'].$request['CustomerReceipt']['email'];
+	    $reque=md5($str);
+	    $auth = base64_encode($this->public_id. ":" . $this->api_pass);
+	    $response = wp_remote_post( $API_URL, array(
+		    'timeout'     => 30,
+		    'redirection' => 5,
+		    'httpversion' => '1.0',
+		    'blocking'    => true,
+		    'headers'     => array('Authorization' => 'Basic '.$auth, 'Content-Type' => 'application/json', 'X-Request-ID' => $reque),
+		    'body'        => $request2,
+		    'cookies'     => array()
+	    ) );
+
+	    $body = json_decode($response['body']);
+	    if(!empty($body->Message)){
+		    self::ckgwwc_addError('Check create resp message: '.mb_convert_encoding($body->Message, "windows-1251", "utf-8"));
+	    }
+
+	    self::ckgwwc_addError('Check create resp: '.json_encode($response));
     }
         
     public function ckgwwc_update_order_status($order_id,$old_status,$new_status) //OK
