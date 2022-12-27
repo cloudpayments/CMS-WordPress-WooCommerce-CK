@@ -352,6 +352,10 @@ function ckgwwc_CloudKassir()
 	    $total_amount = 0;
 
 	    foreach ($cart as $item_id => $item_data):
+            if($item_data->is_type( 'shipping' ) || $item_data->is_type( 'fee' )){
+                continue;
+            }
+
 		    $product = $item_data->get_product();
 		    if ("wc-".$new_status == $this->status_delivered) {
 			    $method = 4;
@@ -414,7 +418,7 @@ function ckgwwc_CloudKassir()
 
 
 	    foreach ($data['cloudPayments']['customerReceipt']['Items'] as &$item){
-		    if(!empty($percent)){
+		    if(!empty($percent) && $item['label'] != 'Доставка'){
 			    $fee_item = floatval($item['amount']) * $percent;
 
 			    $amount = $item['amount'] + $fee_item;
