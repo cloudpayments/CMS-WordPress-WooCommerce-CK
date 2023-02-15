@@ -1,14 +1,23 @@
 <?php
-/**
+
+/*
  * Plugin Name: CloudKassir for WooCommerce
- * Plugin URI: https://cloudkassir.ru/
  * Description: Extends WooCommerce with CloudKassir.
+ * Author URI: https://cloudkassir.ru/
  * Version: 2.1
+ * Text Domain: text_domain
+ * Domain Path: /languages
+ * WC requires at least: 3.0.0
+ * WC tested up to: 4.3.0
  */
-if ( ! defined( 'ABSPATH' ) ) exit;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 
 // Register New Order Statuses
-function ckgwwc_register_post_statuses() 
+function ckgwwc_register_post_statuses()
 {
     register_post_status( 'wc-pay_delivered', array(
         'label'                     => _x( 'Доставлен', 'WooCommerce Order status', 'text_domain' ),
@@ -29,7 +38,7 @@ function ckgwwc_add_order_statuses( $order_statuses )
 }
 add_filter( 'wc_order_statuses', 'ckgwwc_add_order_statuses' );
 
-if (!function_exists('getallheaders'))  
+if (!function_exists('getallheaders'))
 {
     function getallheaders()
     {
@@ -49,24 +58,24 @@ if (!function_exists('getallheaders'))
 
 add_action('plugins_loaded', 'ckgwwc_CloudKassir', 0);
 
-function ckgwwc_CloudKassir() 
-{	
+function ckgwwc_CloudKassir()
+{
   if ( !class_exists( 'WC_Payment_Gateway' ) ) {
 	    echo 'CloudKassir for WooCommerce plugin is disabled. Check to see if this plugin is active.';
 	    return;
 	}
-	
+
   add_filter('woocommerce_payment_gateways','ckgwwc_add_ckgwwc');
   function ckgwwc_add_ckgwwc( $methods )
-  {	
-		$methods[] = 'WC_CloudKassir'; 
+  {
+		$methods[] = 'WC_CloudKassir';
 		return $methods;
   }
 
 
   class WC_CloudKassir extends WC_Payment_Gateway
   {
-	public function __construct() 
+	public function __construct()
     {
       $this->id                     = 'ckgwwc_kassir';
       $this->has_fields             = true;
@@ -79,12 +88,12 @@ function ckgwwc_CloudKassir()
       $this->status_pay             = $this->get_option( 'status_pay' );
       $this->init_form_fields();
       $this->init_settings();
-      
+
       $this->title              	= $this->get_option( 'title' );
       $this->description        	= $this->get_option( 'description' );
       $this->public_id    	        = $this->get_option( 'public_id' );
       $this->api_pass    	     	= $this->get_option( 'api_pass' );
-      
+
       $this->kassa_taxtype          = $this->get_option( 'kassa_taxtype' );
       $this->delivery_taxtype       = $this->get_option( 'delivery_taxtype' );
       $this->kassa_taxsystem        = $this->get_option( 'kassa_taxsystem' );
@@ -92,22 +101,25 @@ function ckgwwc_CloudKassir()
       $this->kassa_skubarcode       = $this->get_option( 'kassa_skubarcode' );
       $this->kassa_includeshipping  = $this->get_option( 'kassa_includeshipping' );
       $this->payment_methods        = $this->get_option( 'payment_methods' );
+      $this->shipping_discount        = $this->get_option( 'shipping_discount' ) == 'yes';
       $this->kassa_method           = $this->get_option( 'kassa_method' );
       $this->kassa_object           = $this->get_option( 'kassa_object' );
       $this->status_delivered       = $this->get_option( 'status_delivered' );
-            
+
+      var_dump($this->shipping_discount);
+
       add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
       add_action('woocommerce_order_status_changed', array( $this, 'ckgwwc_update_order_status'), 10, 3);
       add_action( 'woocommerce_api_'. strtolower( get_class( $this ) ), array( $this, 'ckgwwc_callback' ) );
 	}
 
 	// Admin options
-	public function admin_options() 
-    {		
+	public function admin_options()
+    {
 			?>
 				<h3>CloudKassir</h3>
 			<?php
-		
+
 			echo '<table class="form-table">';
 			$this->generate_settings_html();
 			echo '</table>';
@@ -116,7 +128,7 @@ function ckgwwc_CloudKassir()
 	public function init_form_fields()
     {
 		$array_status = wc_get_order_statuses();
-	    $ordering  = (array) get_option( 'woocommerce_gateway_order' );     
+	    $ordering  = (array) get_option( 'woocommerce_gateway_order' );
 		$this->form_fields = array(
 				'status_pay' => array(
 					'title'       => __( 'Статус для печати чека прихода', 'woocommerce' ),
@@ -191,7 +203,7 @@ function ckgwwc_CloudKassir()
 						'110' => __( 'расчетный НДС 10/110', 'woocommerce' ),
 						'120' => __( 'расчетный НДС 20/120', 'woocommerce' ),
 					),
-				),  
+				),
 				'delivery_taxtype' => array(
 					'title'       => __( 'Ставка НДС для доставки', 'woocommerce' ),
 					'type'        => 'select',
@@ -207,7 +219,7 @@ function ckgwwc_CloudKassir()
 						'110' => __( 'расчетный НДС 10/110', 'woocommerce' ),
 						'120' => __( 'расчетный НДС 20/120', 'woocommerce' ),
 					),
-				), 
+				),
 				'kassa_taxsystem' => array(
 					'title'       => __( 'Cистема налогообложения организации', 'woocommerce' ),
 					'type'        => 'select',
@@ -280,14 +292,19 @@ function ckgwwc_CloudKassir()
 					'type'        => 'multiselect',
 					'class'       => 'wc-enhanced-select',
 					'description' => __( '', 'woocommerce' ),
-					'default'     => '',   
+					'default'     => '',
                     'multiple' => true,
 					'desc_tip'    => true,
 					'options'     => array(
 					),
-				),                
+				),
+			    'shipping_discount' => array(
+                    'title'   => __( 'Применять скидку к доставке', 'woocommerce' ),
+                    'type'    => 'checkbox',
+                    'label'   => __( 'Да\Нет', 'woocommerce' ),
+			    )
 			);
-            
+
             foreach ($ordering as $paym=>$k):
                 if ($paym == 'bacs') $paym_name = 'Прямой банковский перевод';
                 if ($paym == 'cheque') $paym_name = 'Чековые платежи';
@@ -325,7 +342,7 @@ function ckgwwc_CloudKassir()
         }
         return $headers;
     }
-  
+
     public function ckgwwc_addError($text)
     {
           $debug=false;
@@ -337,14 +354,14 @@ function ckgwwc_CloudKassir()
             file_put_contents($file, $current);
           }
     }
-        
+
   	public function ckgwwc_get_order($request)
     {
-    	global $woocommerce;			
+    	global $woocommerce;
     	$order = new WC_Order($request['InvoiceId']);
       return $order;
-    } 
-    
+    }
+
   	public function ckgwwc_SendReceipt($order,$type,$old_status,$new_status)
     {
 	    self::ckgwwc_addError('SendReceipt!!');
@@ -352,7 +369,7 @@ function ckgwwc_CloudKassir()
 	    $total_amount = 0;
 
 	    foreach ($cart as $item_id => $item_data):
-            if($item_data->is_type( 'shipping' ) || $item_data->is_type( 'fee' )){
+            if(($item_data->is_type( 'shipping' ) || !$this->shipping_discount) || $item_data->is_type( 'fee' )){
                 continue;
             }
 
@@ -408,7 +425,12 @@ function ckgwwc_CloudKassir()
 	    $data['cloudPayments']['customerReceipt']['email']=$order->get_billing_email();
 	    $data['cloudPayments']['customerReceipt']['phone']=$order->get_billing_phone();
 	    //вычисление итогового amount
-	    $data['cloudPayments']['customerReceipt']['amounts']['electronic']=$total_amount + $total_fees;
+        if(!empty($total_fees)){
+	        $data['cloudPayments']['customerReceipt']['amounts']['electronic']= $total_amount + $total_fees;
+        }else{
+	        $data['cloudPayments']['customerReceipt']['amounts']['electronic']= $total_amount;
+        }
+
 	    //вычитаем скидку
 
 	    if(!empty($total_fees)){
@@ -416,9 +438,8 @@ function ckgwwc_CloudKassir()
 	    }
 
 
-
 	    foreach ($data['cloudPayments']['customerReceipt']['Items'] as &$item){
-		    if(!empty($percent) && $item['label'] != 'Доставка'){
+		    if(!empty($percent) && ($item['label'] != 'Доставка' || $this->shipping_discount)){
 			    $fee_item = floatval($item['amount']) * $percent;
 
 			    $amount = $item['amount'] + $fee_item;
@@ -453,7 +474,7 @@ function ckgwwc_CloudKassir()
 	    self::ckgwwc_send_request($API_URL,$aData);
 	    self::ckgwwc_addError("kkt/receipt");
     }
-    
+
     public function ckgwwc_send_request($API_URL,$request)  ///OK
     {
 	    $request2=self::ckgwwc_cur_json_encode($request);
@@ -477,9 +498,9 @@ function ckgwwc_CloudKassir()
 
 	    self::ckgwwc_addError('Check create resp: '.json_encode($response));
     }
-        
+
     public function ckgwwc_update_order_status($order_id,$old_status,$new_status) //OK
-    {                                          
+    {
       $this->ckgwwc_addError('update_order_statuskassa');
       $this->ckgwwc_addError('payment_methods');
       $this->ckgwwc_addError($this->status_pay."==wc-".$new_status);
@@ -496,16 +517,16 @@ function ckgwwc_CloudKassir()
           self::ckgwwc_SendReceipt($order, 'IncomeReturn',$old_status,$new_status);
         endif;
       else:
-      endif; 
+      endif;
     }
-        
+
 		// Callback
-    public function ckgwwc_handle_callback() 
+    public function ckgwwc_handle_callback()
     {
       $this->ckgwwc_addError('handle_callbackkassa');
     }
-    
-    
+
+
     function ckgwwc_cur_json_encode($a=false)      /////ok
     {
         if (is_null($a) || is_resource($a)) {
@@ -517,52 +538,52 @@ function ckgwwc_CloudKassir()
         if ($a === true) {
             return 'true';
         }
-        
+
         if (is_scalar($a)) {
             if (is_float($a)) {
                 $a = str_replace(',', '.', strval($a));
             }
-    
+
             static $jsonReplaces = array(
                 array("\\", "/", "\n", "\t", "\r", "\b", "\f", '"'),
                 array('\\\\', '\\/', '\\n', '\\t', '\\r', '\\b', '\\f', '\"')
             );
-    
+
             return '"' . str_replace($jsonReplaces[0], $jsonReplaces[1], $a) . '"';
         }
-    
+
         $isList = true;
-    
+
         for ($i = 0, reset($a); $i < count($a); $i++, next($a)) {
             if (key($a) !== $i) {
                 $isList = false;
                 break;
             }
         }
-    
+
         $result = array();
-        
+
         if ($isList) {
             foreach ($a as $v) {
                 $result[] = self::ckgwwc_cur_json_encode($v);
             }
-        
+
             return '[ ' . join(', ', $result) . ' ]';
         } else {
             foreach ($a as $k => $v) {
                 $result[] = self::ckgwwc_cur_json_encode($k) . ': ' . self::ckgwwc_cur_json_encode($v);
             }
-    
+
             return '{ ' . join(', ', $result) . ' }';
         }
     }
-    
-    public function ckgwwc_callback() 
+
+    public function ckgwwc_callback()
     {
         if ($_GET['action'] == 'receipt') {
-            
+
             $request['InvoiceId']=$_POST['InvoiceId'];
-            	
+
             if ($_POST['Type'] == 'IncomeReturn') {
                 $Type = 'возврата прихода';
             }
@@ -574,8 +595,8 @@ function ckgwwc_CloudKassir()
             $order=self::ckgwwc_get_order($request);
             $var = $order->add_order_note( $note, 1 );
             $order->save();
-            $data['CODE'] = 0;                         					
-            echo json_encode($data);  
+            $data['CODE'] = 0;
+            echo json_encode($data);
             exit;
         }
     }
