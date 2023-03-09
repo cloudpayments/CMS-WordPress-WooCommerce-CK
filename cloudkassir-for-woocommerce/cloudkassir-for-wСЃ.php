@@ -106,8 +106,6 @@ function ckgwwc_CloudKassir()
       $this->kassa_object           = $this->get_option( 'kassa_object' );
       $this->status_delivered       = $this->get_option( 'status_delivered' );
 
-      var_dump($this->shipping_discount);
-
       add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
       add_action('woocommerce_order_status_changed', array( $this, 'ckgwwc_update_order_status'), 10, 3);
       add_action( 'woocommerce_api_'. strtolower( get_class( $this ) ), array( $this, 'ckgwwc_callback' ) );
@@ -311,7 +309,10 @@ function ckgwwc_CloudKassir()
                 if ($paym == 'cod') $paym_name = 'Оплата при доставке';
                 if ($paym == 'paypal') $paym_name = 'PayPal';
                 if ($paym == 'cpgwwc') $paym_name = 'CloudPayments';
-                $this->form_fields['payment_methods']['options'][$paym]=__($paym_name, 'woocommerce');
+                if(!empty($paym_name)){
+	                $this->form_fields['payment_methods']['options'][$paym]=__($paym_name, 'woocommerce');
+                }
+
             endforeach;
 		}
 
