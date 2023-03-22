@@ -3,7 +3,7 @@
  * Plugin Name: CloudKassir for WooCommerce
  * Plugin URI: https://cloudkassir.ru/
  * Description: Extends WooCommerce with CloudKassir.
- * Version: 2.1
+ * Version: 2.2
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -116,6 +116,24 @@ function ckgwwc_CloudKassir()
 	public function init_form_fields()
     {
 		$array_status = wc_get_order_statuses();
+
+	    $load_gateways = array(
+		    'WC_Gateway_BACS',
+		    'WC_Gateway_Cheque',
+		    'WC_Gateway_COD',
+	    );
+
+	    //$load_gateways = apply_filters( 'woocommerce_payment_gateways', $load_gateways );
+        $gateways = [];
+
+	    foreach ( $load_gateways as $gateway ) {
+		    if ( is_string( $gateway ) && class_exists( $gateway ) && $gateway != 'WC_CloudKassir' ) {
+			    $gateway = new $gateway();
+			    $gateways[$gateway->id] = $gateway->title;
+		    }
+	    }
+
+
 	    $ordering  = (array) get_option( 'woocommerce_gateway_order' );     
 		$this->form_fields = array(
 				'status_pay' => array(
@@ -288,13 +306,9 @@ function ckgwwc_CloudKassir()
 				),                
 			);
             
-            foreach ($ordering as $paym=>$k):
-                if ($paym == 'bacs') $paym_name = 'Прямой банковский перевод';
-                if ($paym == 'cheque') $paym_name = 'Чековые платежи';
-                if ($paym == 'cod') $paym_name = 'Оплата при доставке';
-                if ($paym == 'paypal') $paym_name = 'PayPal';
-                if ($paym == 'cpgwwc') $paym_name = 'CloudPayments';
-                $this->form_fields['payment_methods']['options'][$paym]=__($paym_name, 'woocommerce');
+            foreach ($gateways as $paym => $k):
+
+                $this->form_fields['payment_methods']['options'][$paym] = __($k, 'woocommerce');
             endforeach;
 		}
 
@@ -485,7 +499,7 @@ function ckgwwc_CloudKassir()
       $this->ckgwwc_addError($this->status_pay."==wc-".$new_status);
       $request['InvoiceId']=$order_id;
       $order=self::ckgwwc_get_order($request);
-      if (in_array($order->get_payment_method(),$this->payment_methods)):
+      if (!empty($this->payment_methods) && in_array($order->get_payment_method(),$this->payment_methods)):
         if ($this->status_pay=="wc-".$new_status || ("wc-".$new_status == $this->status_delivered && ((int)$this->kassa_method == 1 || (int)$this->kassa_method == 2 || (int)$this->kassa_method == 3))):
           self::ckgwwc_addError("Send kkt Income!");
           $this->ckgwwc_addError('request');
