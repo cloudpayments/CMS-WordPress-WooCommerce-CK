@@ -3,7 +3,7 @@
  * Plugin Name: CloudKassir for WooCommerce
  * Plugin URI: https://cloudkassir.ru/
  * Description: Extends WooCommerce with CloudKassir.
- * Version: 2.2
+ * Version: 2.3
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
