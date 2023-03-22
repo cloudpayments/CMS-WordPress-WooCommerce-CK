@@ -123,7 +123,7 @@ function ckgwwc_CloudKassir()
 		    'WC_Gateway_COD',
 	    );
 
-	    //$load_gateways = apply_filters( 'woocommerce_payment_gateways', $load_gateways );
+	    $load_gateways = apply_filters( 'woocommerce_payment_gateways', $load_gateways );
         $gateways = [];
 
 	    foreach ( $load_gateways as $gateway ) {
