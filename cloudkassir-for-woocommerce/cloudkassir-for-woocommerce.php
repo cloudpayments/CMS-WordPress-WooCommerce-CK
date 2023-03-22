@@ -134,7 +134,6 @@ function ckgwwc_CloudKassir()
 	    }
 
 
-	    $ordering  = (array) get_option( 'woocommerce_gateway_order' );     
 		$this->form_fields = array(
 				'status_pay' => array(
 					'title'       => __( 'Статус для печати чека прихода', 'woocommerce' ),
