@@ -95,6 +95,7 @@ function ckgwwc_CloudKassir()
       $this->kassa_method           = $this->get_option( 'kassa_method' );
       $this->kassa_object           = $this->get_option( 'kassa_object' );
       $this->status_delivered       = $this->get_option( 'status_delivered' );
+	    $this->shipping_discount        = $this->get_option( 'shipping_discount' ) == 'yes';
             
       add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
       add_action('woocommerce_order_status_changed', array( $this, 'ckgwwc_update_order_status'), 10, 3);
@@ -302,7 +303,12 @@ function ckgwwc_CloudKassir()
 					'desc_tip'    => true,
 					'options'     => array(
 					),
-				),                
+				),
+				'shipping_discount' => array(
+					'title'   => __( 'Применять скидку к доставке', 'woocommerce' ),
+					'type'    => 'checkbox',
+					'label'   => __( 'Да\Нет', 'woocommerce' ),
+				)
 			);
             
             foreach ($gateways as $paym => $k):
@@ -421,7 +427,11 @@ function ckgwwc_CloudKassir()
 	    $data['cloudPayments']['customerReceipt']['email']=$order->get_billing_email();
 	    $data['cloudPayments']['customerReceipt']['phone']=$order->get_billing_phone();
 	    //вычисление итогового amount
-	    $data['cloudPayments']['customerReceipt']['amounts']['electronic']=$total_amount + $total_fees;
+	    if(!empty($total_fees)){
+		    $data['cloudPayments']['customerReceipt']['amounts']['electronic']= $total_amount + $total_fees;
+	    }else{
+		    $data['cloudPayments']['customerReceipt']['amounts']['electronic']= $total_amount;
+	    }
 	    //вычитаем скидку
 
 	    if(!empty($total_fees)){
@@ -431,7 +441,7 @@ function ckgwwc_CloudKassir()
 
 
 	    foreach ($data['cloudPayments']['customerReceipt']['Items'] as &$item){
-		    if(!empty($percent) && $item['label'] != 'Доставка'){
+		    if(!empty($percent) && $item['label'] != 'Доставка' || $this->shipping_discount){
 			    $fee_item = floatval($item['amount']) * $percent;
 
 			    $amount = $item['amount'] + $fee_item;
