@@ -371,9 +371,9 @@ function ckgwwc_CloudKassir()
 	    $total_amount = 0;
 
 	    foreach ($cart as $item_id => $item_data):
-            if($item_data->is_type( 'shipping' ) || $item_data->is_type( 'fee' )){
-                continue;
-            }
+		    if($item_data->is_type( 'shipping' ) || $item_data->is_type( 'fee' )){
+			    continue;
+		    }
 
 		    $product = $item_data->get_product();
 		    if ("wc-".$new_status == $this->status_delivered) {
@@ -416,7 +416,10 @@ function ckgwwc_CloudKassir()
 			    'object'   => 4,
 		    );
 
-		    $total_amount = $total_amount + number_format(floatval($order->get_total_shipping()),2,".",'');
+        if($this->shipping_discount){
+	        $total_amount = $total_amount + number_format(floatval($order->get_total_shipping()),2,".",'');
+        }
+
 
 	    endif;
 
@@ -427,27 +430,30 @@ function ckgwwc_CloudKassir()
 	    $data['cloudPayments']['customerReceipt']['email']=$order->get_billing_email();
 	    $data['cloudPayments']['customerReceipt']['phone']=$order->get_billing_phone();
 	    //вычисление итогового amount
-	    if(!empty($total_fees)){
+	    /*if(!empty($total_fees)){
 		    $data['cloudPayments']['customerReceipt']['amounts']['electronic']= $total_amount + $total_fees;
 	    }else{
 		    $data['cloudPayments']['customerReceipt']['amounts']['electronic']= $total_amount;
-	    }
+	    }*/
+
 	    //вычитаем скидку
 
 	    if(!empty($total_fees)){
 		    $percent = $total_fees / floatval($total_amount);
 	    }
 
-
-
+        $total = 0;
 	    foreach ($data['cloudPayments']['customerReceipt']['Items'] as &$item){
-		    if(!empty($percent) && $item['label'] != 'Доставка' || $this->shipping_discount){
+		    if(!empty($percent) && ($item['label'] != 'Доставка' || $this->shipping_discount)){
 			    $fee_item = floatval($item['amount']) * $percent;
 
 			    $amount = $item['amount'] + $fee_item;
 			    $item['amount'] = number_format(floatval($amount), 2);
 		    }
+		    $total += $item['amount'];
 	    }
+
+	    $data['cloudPayments']['customerReceipt']['amounts']['electronic'] = $total;
 	    /*for ($i=0; $i<(count($items)); $i++) {
 		  if ($items[$i]['amount']>$total_fees) {
 			  $data['cloudPayments']['customerReceipt']['Items'][$i]['amount']=$data['cloudPayments']['customerReceipt']['Items'][$i]['amount'] + $total_fees;
@@ -494,6 +500,7 @@ function ckgwwc_CloudKassir()
 	    ) );
 
 	    $body = json_decode($response['body']);
+
 	    if(!empty($body->Message)){
 		    self::ckgwwc_addError('Check create resp message: '.mb_convert_encoding($body->Message, "windows-1251", "utf-8"));
 	    }
@@ -603,4 +610,9 @@ function ckgwwc_CloudKassir()
         }
     }
 	}
+}
+add_action( 'woocommerce_cart_calculate_fees', 'my_new_fee' );
+
+function my_new_fee() {
+	WC()->cart->add_fee( __( 'Test fee', 'tipple' ), -200 );
 }
