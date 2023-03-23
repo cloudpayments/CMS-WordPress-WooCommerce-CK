@@ -307,7 +307,9 @@ function ckgwwc_CloudKassir()
 				'shipping_discount' => array(
 					'title'   => __( 'Применять скидку к доставке', 'woocommerce' ),
 					'type'    => 'checkbox',
-					'label'   => __( 'Да\Нет', 'woocommerce' ),
+					'description' => __( 'Если включено, скидка к доставке применяется', 'woocommerce' ),
+					'desc_tip'    => true,
+                    'label'   => ' ',
 				)
 			);
             
