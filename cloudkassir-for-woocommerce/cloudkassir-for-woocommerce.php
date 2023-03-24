@@ -613,8 +613,3 @@ function ckgwwc_CloudKassir()
     }
 	}
 }
-add_action( 'woocommerce_cart_calculate_fees', 'my_new_fee' );
-
-function my_new_fee() {
-	WC()->cart->add_fee( __( 'Test fee', 'tipple' ), -200 );
-}
