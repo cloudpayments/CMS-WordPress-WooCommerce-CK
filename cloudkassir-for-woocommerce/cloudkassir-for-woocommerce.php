@@ -371,6 +371,7 @@ function ckgwwc_CloudKassir()
 	    self::ckgwwc_addError('SendReceipt!!');
 	    $cart=$order->get_items();
 	    $total_amount = 0;
+	    $total_amount_full = 0;
 
 	    foreach ($cart as $item_id => $item_data):
 		    if($item_data->is_type( 'shipping' ) || $item_data->is_type( 'fee' )){
@@ -404,6 +405,7 @@ function ckgwwc_CloudKassir()
 		    );
 
 		    $total_amount = $total_amount +  number_format(floatval($item_data->get_total()),2,".",'');
+		    $total_amount_full = $total_amount_full +  number_format(floatval($item_data->get_total()),2,".",'');
 
 	    endforeach;
 
@@ -421,7 +423,7 @@ function ckgwwc_CloudKassir()
         if($this->shipping_discount){
 	        $total_amount = $total_amount + number_format(floatval($order->get_total_shipping()),2,".",'');
         }
-
+		    $total_amount_full = $total_amount_full + number_format(floatval($order->get_total_shipping()),2,".",'');
 
 	    endif;
 
@@ -432,11 +434,11 @@ function ckgwwc_CloudKassir()
 	    $data['cloudPayments']['customerReceipt']['email']=$order->get_billing_email();
 	    $data['cloudPayments']['customerReceipt']['phone']=$order->get_billing_phone();
 	    //вычисление итогового amount
-	    /*if(!empty($total_fees)){
-		    $data['cloudPayments']['customerReceipt']['amounts']['electronic']= $total_amount + $total_fees;
+	    if(!empty($total_fees)){
+		    $data['cloudPayments']['customerReceipt']['amounts']['electronic']= $total_amount_full + $total_fees;
 	    }else{
-		    $data['cloudPayments']['customerReceipt']['amounts']['electronic']= $total_amount;
-	    }*/
+		    $data['cloudPayments']['customerReceipt']['amounts']['electronic']= $total_amount_full;
+	    }
 
 	    //вычитаем скидку
 
@@ -455,7 +457,11 @@ function ckgwwc_CloudKassir()
 		    $total += $item['amount'];
 	    }
 
-	    $data['cloudPayments']['customerReceipt']['amounts']['electronic'] = $total;
+        if($total != $data['cloudPayments']['customerReceipt']['amounts']['electronic']){
+            $diff = $total - $data['cloudPayments']['customerReceipt']['amounts']['electronic'];
+	        $data['cloudPayments']['customerReceipt']['Items'][0]['amount'] -= number_format($diff, 2);
+        }
+
 	    /*for ($i=0; $i<(count($items)); $i++) {
 		  if ($items[$i]['amount']>$total_fees) {
 			  $data['cloudPayments']['customerReceipt']['Items'][$i]['amount']=$data['cloudPayments']['customerReceipt']['Items'][$i]['amount'] + $total_fees;
