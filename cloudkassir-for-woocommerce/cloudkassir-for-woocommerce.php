@@ -356,6 +356,7 @@ function ckgwwc_CloudKassir()
 			$cart = $order->get_items();
 			$total_amount = 0;
 			$total_amount_full = 0;
+			$total_fees = 0;
 
 			foreach ($cart as $item_id => $item_data):
 				if ($item_data->is_type('shipping') || $item_data->is_type('fee')) continue;
@@ -407,11 +408,10 @@ function ckgwwc_CloudKassir()
 			$data['cloudPayments']['customerReceipt']['email']            = $order->get_billing_email();
 			$data['cloudPayments']['customerReceipt']['phone']            = $order->get_billing_phone();
 			//вычисление итогового amount
-			if (!empty($total_fees)) $data['cloudPayments']['customerReceipt']['amounts']['electronic'] = $total_amount_full + $total_fees; 
-            else $data['cloudPayments']['customerReceipt']['amounts']['electronic'] = $total_amount_full;
+			$data['cloudPayments']['customerReceipt']['amounts']['electronic'] = $total_amount_full + $total_fees;
 
 			//вычитаем скидку
-			if (!empty($total_fees)) $percent = $total_fees / floatval($total_amount);
+			if ($total_fees > 0) $percent = $total_fees / floatval($total_amount);
 
 			$total = 0;
 			foreach ($data['cloudPayments']['customerReceipt']['Items'] as &$item) {
